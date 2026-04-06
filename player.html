@@ -4,31 +4,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Hit Quiz – Lecture</title>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
+<title>Hit Quiz</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
 background: #0a0a0a;
-color: #fff;
-font-family: ‘Playfair Display’, Georgia, serif;
 min-height: 100vh;
 display: flex;
 align-items: center;
 justify-content: center;
+font-family: -apple-system, sans-serif;
 overflow: hidden;
 }
 
-/* Animated background rings */
-.bg-rings {
+/* Animated rings */
+.rings {
 position: fixed;
 inset: 0;
 display: flex;
 align-items: center;
 justify-content: center;
 pointer-events: none;
-z-index: 0;
 }
 .ring {
 position: absolute;
@@ -36,309 +33,357 @@ border-radius: 50%;
 border: 2px solid;
 opacity: 0;
 }
-.ring.pulse {
-animation: ring-pulse 2.4s ease-out infinite;
-}
-.ring:nth-child(1) { width:120px; height:120px; border-color: #FFD700; animation-delay: 0s; }
-.ring:nth-child(2) { width:200px; height:200px; border-color: #FF1D58; animation-delay: 0.6s; }
-.ring:nth-child(3) { width:290px; height:290px; border-color: #00FFFF; animation-delay: 1.2s; }
-.ring:nth-child(4) { width:390px; height:390px; border-color: #FFD700; animation-delay: 1.8s; }
-@keyframes ring-pulse {
-0%   { opacity: 0.7; transform: scale(0.85); }
-100% { opacity: 0;   transform: scale(1.15); }
+.ring.active { animation: rpulse 2s ease-out infinite; }
+.ring:nth-child(1){ width:100px;  height:100px;  border-color:#FFD700; animation-delay:0s;    }
+.ring:nth-child(2){ width:180px;  height:180px;  border-color:#FF1D58; animation-delay:0.5s;  }
+.ring:nth-child(3){ width:270px;  height:270px;  border-color:#00FFFF; animation-delay:1s;    }
+.ring:nth-child(4){ width:370px;  height:370px;  border-color:#FFD700; animation-delay:1.5s;  }
+@keyframes rpulse {
+0%   { opacity:.65; transform:scale(.8);  }
+100% { opacity:0;   transform:scale(1.2); }
 }
 
-/* Card */
-.card {
+/* Center UI */
+.ui {
 position: relative;
-z-index: 1;
-background: #FF1D58;
-border-radius: 20px;
-width: 88vw;
-max-width: 340px;
-padding: 36px 28px 28px;
+z-index: 10;
 display: flex;
 flex-direction: column;
 align-items: center;
-gap: 10px;
-box-shadow: 0 20px 60px rgba(255,29,88,.45);
-text-align: center;
-}
-.card::before {
-content: ‘’;
-position: absolute;
-top: -25%; right: -15%;
-width: 55%; height: 150%;
-background: rgba(255,255,255,.07);
-transform: rotate(-18deg);
-border-radius: 4px;
-pointer-events: none;
-}
-
-.label-artiste {
-font-size: 0.65rem;
-text-transform: uppercase;
-letter-spacing: 3px;
-color: rgba(255,255,255,.7);
-position: relative;
-}
-.annee {
-font-family: ‘Anton’, sans-serif;
-font-size: 5.5rem;
-line-height: 1;
-color: #fff;
-text-shadow: 4px 4px 0 rgba(0,0,0,.22);
-position: relative;
-}
-.label-titre {
-font-style: italic;
-font-size: 1rem;
-color: rgba(255,255,255,.92);
-line-height: 1.4;
-position: relative;
+gap: 28px;
 }
 
 /* Progress ring */
-.progress-wrap {
-margin-top: 18px;
+.prog-wrap {
 position: relative;
-width: 100px;
-height: 100px;
-flex-shrink: 0;
+width: 160px;
+height: 160px;
 }
-.progress-wrap svg {
+.prog-wrap svg {
 position: absolute;
 inset: 0;
 transform: rotate(-90deg);
 }
-.progress-bg { fill: none; stroke: rgba(255,255,255,.15); stroke-width: 6; }
-.progress-arc {
-fill: none;
-stroke: #FFD700;
-stroke-width: 6;
-stroke-linecap: round;
-stroke-dasharray: 283; /* 2π×45 */
+.track { fill:none; stroke:rgba(255,255,255,.1); stroke-width:8; }
+.arc   {
+fill:none;
+stroke: url(#grad);
+stroke-width:8;
+stroke-linecap:round;
+stroke-dasharray: 408; /* 2π×65 */
 stroke-dashoffset: 0;
 transition: stroke-dashoffset 1s linear;
 }
-.progress-inner {
+.center-icon {
 position: absolute;
 inset: 0;
 display: flex;
-flex-direction: column;
 align-items: center;
 justify-content: center;
+flex-direction: column;
+gap: 4px;
 }
-.timer-val {
-font-family: ‘Anton’, sans-serif;
-font-size: 1.6rem;
+.center-icon .icon-note {
+font-size: 2.8rem;
 line-height: 1;
-color: #fff;
 }
-.timer-lbl {
-font-size: 0.5rem;
-letter-spacing: 2px;
+.center-icon .timer {
+font-size: 1rem;
+font-weight: 700;
 color: rgba(255,255,255,.5);
-text-transform: uppercase;
-margin-top: 2px;
+letter-spacing: 1px;
 }
 
-/* Status messages */
-.status {
-margin-top: 6px;
-font-size: 0.72rem;
-color: rgba(255,255,255,.55);
-font-style: italic;
-min-height: 18px;
+/* State: loading — spinner replaces arc */
+.spinner-wrap {
 position: relative;
+width: 160px;
+height: 160px;
+display: none;
+}
+.spinner-wrap svg {
+position: absolute;
+inset: 0;
+transform: rotate(-90deg);
+animation: spin 1.2s linear infinite;
+}
+@keyframes spin { to { transform: rotate(270deg); } }
+.spin-arc {
+fill: none; stroke: #FF1D58; stroke-width: 8;
+stroke-linecap: round;
+stroke-dasharray: 408;
+stroke-dashoffset: 300;
+}
+.spinner-wrap .center-icon { position: absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+.spinner-wrap .center-icon span { font-size:2.2rem; }
+
+/* Status text */
+.status {
+color: rgba(255,255,255,.45);
+font-size: .85rem;
+text-align: center;
+min-height: 20px;
+letter-spacing: .5px;
 }
 
 /* Replay button */
 .btn-replay {
-margin-top: 10px;
-background: rgba(255,255,255,.15);
-border: 1px solid rgba(255,255,255,.35);
+display: none;
+background: rgba(255,255,255,.1);
+border: 1px solid rgba(255,255,255,.25);
 color: #fff;
-padding: 10px 28px;
-border-radius: 8px;
-font-family: ‘Anton’, sans-serif;
-font-size: 0.85rem;
+padding: 14px 40px;
+border-radius: 50px;
+font-size: 1rem;
+font-weight: 600;
 letter-spacing: 2px;
 cursor: pointer;
-display: none;
 transition: background .2s;
-position: relative;
+-webkit-tap-highlight-color: transparent;
 }
-.btn-replay:hover { background: rgba(255,255,255,.28); }
+.btn-replay:active { background: rgba(255,255,255,.22); }
 
-/* State: loading */
-body.loading .ring { opacity: 0 !important; animation: none !important; }
-body.loading .status::after {
-content: ‘’;
-display: inline-block;
-width: 6px; height: 6px;
-background: rgba(255,255,255,.6);
-border-radius: 50%;
-animation: dot-blink .8s infinite alternate;
+/* Tap to start (autoplay blocked) */
+.btn-tap {
+display: none;
+background: #FF1D58;
+border: none;
+color: #fff;
+padding: 18px 52px;
+border-radius: 50px;
+font-size: 1.1rem;
+font-weight: 700;
+letter-spacing: 2px;
+cursor: pointer;
+box-shadow: 0 0 30px rgba(255,29,88,.5);
+-webkit-tap-highlight-color: transparent;
+animation: pulse-btn 1.4s ease-in-out infinite;
 }
-@keyframes dot-blink { from { opacity:.2 } to { opacity:1 } }
+@keyframes pulse-btn {
+0%,100%{ transform:scale(1);   box-shadow:0 0 30px rgba(255,29,88,.5); }
+50%    { transform:scale(1.04);box-shadow:0 0 44px rgba(255,29,88,.75); }
+}
 
-/* State: error */
-body.error .card { background: #222; box-shadow: 0 20px 60px rgba(0,0,0,.5); }
-body.error .annee { font-size: 3rem; }
-
-/* Finished */
-.finished-icon { font-size: 2rem; display: none; }
+/* Error state */
+.error-msg {
+display: none;
+color: rgba(255,255,255,.35);
+font-size: .9rem;
+text-align: center;
+line-height: 1.6;
+max-width: 240px;
+}
 </style>
 
 </head>
-<body class="loading">
+<body>
 
-<div class="bg-rings">
-  <div class="ring"></div>
-  <div class="ring"></div>
-  <div class="ring"></div>
-  <div class="ring"></div>
+<div class="rings">
+  <div class="ring" id="r1"></div>
+  <div class="ring" id="r2"></div>
+  <div class="ring" id="r3"></div>
+  <div class="ring" id="r4"></div>
 </div>
 
-<div class="card">
-  <div class="label-artiste" id="el-artiste">—</div>
-  <div class="annee"         id="el-annee">—</div>
-  <div class="label-titre"   id="el-titre">—</div>
+<div class="ui">
 
-  <div class="progress-wrap" id="el-progress" style="display:none">
-    <svg viewBox="0 0 100 100">
-      <circle class="progress-bg" cx="50" cy="50" r="45"/>
-      <circle class="progress-arc" id="arc" cx="50" cy="50" r="45"/>
+  <!-- Loading spinner (visible while fetching) -->
+
+  <div class="spinner-wrap" id="spinner">
+    <svg viewBox="0 0 160 160">
+      <circle class="spin-arc" cx="80" cy="80" r="65"/>
     </svg>
-    <div class="progress-inner">
-      <div class="timer-val" id="el-timer">30</div>
-      <div class="timer-lbl">secondes</div>
+    <div class="center-icon"><span>🎵</span></div>
+  </div>
+
+  <!-- Progress ring (visible while playing) -->
+
+  <div class="prog-wrap" id="prog-wrap" style="display:none">
+    <svg viewBox="0 0 160 160">
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%"   stop-color="#FF1D58"/>
+          <stop offset="100%" stop-color="#FFD700"/>
+        </linearGradient>
+      </defs>
+      <circle class="track" cx="80" cy="80" r="65"/>
+      <circle class="arc"   cx="80" cy="80" r="65" id="arc"/>
+    </svg>
+    <div class="center-icon">
+      <span class="icon-note">🎵</span>
+      <span class="timer" id="timer">30</span>
     </div>
   </div>
 
-  <div class="finished-icon" id="el-check">✅</div>
-  <div class="status" id="el-status">Recherche en cours…</div>
+  <div class="status"    id="status"></div>
+  <button class="btn-tap"    id="btn-tap"    onclick="manualPlay()">▶ LANCER</button>
   <button class="btn-replay" id="btn-replay" onclick="replay()">↺ REJOUER</button>
+  <div class="error-msg" id="error-msg"></div>
+
 </div>
 
 <audio id="audio" preload="auto"></audio>
 
 <script>
-  const DURATION   = 30;
-  const CIRCUMF    = 2 * Math.PI * 45; // ≈ 283
+  const DURATION  = 30;
+  const CIRCUMF   = 2 * Math.PI * 65; // ≈ 408
 
-  const params   = new URLSearchParams(window.location.search);
-  const artist   = params.get('a') || '';
-  const title    = params.get('t') || '';
-  const year     = params.get('y') || '';
-  const dispA    = params.get('da') || artist;
-  const dispT    = params.get('dt') || title;
+  // URL params
+  const p      = new URLSearchParams(window.location.search);
+  const artist = p.get('a') || '';
+  const title  = p.get('t') || '';
 
-  document.getElementById('el-artiste').textContent = dispA;
-  document.getElementById('el-annee').textContent   = year;
-  document.getElementById('el-titre').textContent   = dispT;
-
-  const audio    = document.getElementById('audio');
-  const arc      = document.getElementById('arc');
-  const elTimer  = document.getElementById('el-timer');
-  const elStatus = document.getElementById('el-status');
-  const elProg   = document.getElementById('el-progress');
-  const elCheck  = document.getElementById('el-check');
-  const btnReplay= document.getElementById('btn-replay');
+  const audio     = document.getElementById('audio');
+  const arc       = document.getElementById('arc');
+  const elTimer   = document.getElementById('timer');
+  const elStatus  = document.getElementById('status');
+  const spinner   = document.getElementById('spinner');
+  const progWrap  = document.getElementById('prog-wrap');
+  const btnTap    = document.getElementById('btn-tap');
+  const btnReplay = document.getElementById('btn-replay');
+  const errMsg    = document.getElementById('error-msg');
+  const rings     = document.querySelectorAll('.ring');
 
   let timerHandle = null;
   let previewUrl  = null;
 
-  /* ── Fetch iTunes preview ── */
-  async function fetchPreview() {
-    const q = encodeURIComponent(`${artist} ${title}`);
-    const url = `https://itunes.apple.com/search?term=${q}&media=music&limit=8&entity=song`;
-    const resp = await fetch(url);
-    const data = await resp.json();
-    if (!data.results || data.results.length === 0) return null;
-    const a = artist.toLowerCase().split(' ')[0];
-    let best = data.results.find(r => r.artistName.toLowerCase().includes(a) && r.previewUrl);
-    if (!best) best = data.results.find(r => r.previewUrl);
-    return best ? best.previewUrl : null;
+  /* ── Fetch with multiple CORS proxies as fallback ── */
+  const PROXIES = [
+    url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
+    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+    url => `https://cors-anywhere.herokuapp.com/${url}`,
+  ];
+
+  async function fetchItunes() {
+    const q        = encodeURIComponent(`${artist} ${title}`);
+    const itunesUrl = `https://itunes.apple.com/search?term=${q}&media=music&limit=8&entity=song`;
+
+    // Try direct first (works on some setups), then proxies
+    const attempts = [
+      () => fetch(itunesUrl),
+      ...PROXIES.map(proxy => () => fetch(proxy(itunesUrl))),
+    ];
+
+    for (const attempt of attempts) {
+      try {
+        const resp = await attempt();
+        if (!resp.ok) continue;
+        const data = await resp.json();
+        if (!data.results || data.results.length === 0) continue;
+
+        const a    = artist.toLowerCase().split(' ')[0];
+        let best   = data.results.find(r => r.artistName.toLowerCase().includes(a) && r.previewUrl);
+        if (!best) best = data.results.find(r => r.previewUrl);
+        if (best && best.previewUrl) return best.previewUrl;
+      } catch(e) { /* try next */ }
+    }
+    return null;
   }
 
-  /* ── Start playback ── */
-  function startPlay(url) {
-    previewUrl = url;
-    audio.src  = url;
-    audio.currentTime = 0;
-    elStatus.textContent = '';
-    elProg.style.display = 'block';
-    arc.style.strokeDashoffset = 0;
-    document.body.classList.remove('loading');
-
-    // Activate pulsing rings
-    document.querySelectorAll('.ring').forEach(r => r.classList.add('pulse'));
-
-    audio.play().catch(() => {
-      // Autoplay blocked — show tap-to-play hint
-      elStatus.textContent = 'Appuyez pour lancer ▶';
-      document.body.addEventListener('click', () => { audio.play(); elStatus.textContent = ''; }, { once: true });
-    });
+  /* ── UI states ── */
+  function setLoading() {
+    spinner.style.display  = 'block';
+    progWrap.style.display = 'none';
+    elStatus.textContent   = '';
+    btnTap.style.display   = 'none';
+    btnReplay.style.display= 'none';
+    errMsg.style.display   = 'none';
   }
 
-  /* ── Timer & arc ── */
-  audio.addEventListener('play', () => {
+  function setPlaying() {
+    spinner.style.display  = 'none';
+    progWrap.style.display = 'block';
+    btnTap.style.display   = 'none';
+    btnReplay.style.display= 'none';
+    errMsg.style.display   = 'none';
+    elStatus.textContent   = '';
+    rings.forEach(r => r.classList.add('active'));
+  }
+
+  function setNeedsTap() {
+    spinner.style.display  = 'none';
+    progWrap.style.display = 'block';
+    btnTap.style.display   = 'inline-block';
+    elStatus.textContent   = '';
+  }
+
+  function setFinished() {
+    rings.forEach(r => r.classList.remove('active'));
+    elTimer.textContent    = '0';
+    arc.style.strokeDashoffset = CIRCUMF;
+    btnReplay.style.display= 'inline-block';
+    elStatus.textContent   = '';
+  }
+
+  function setError(msg) {
+    spinner.style.display  = 'none';
+    progWrap.style.display = 'none';
+    errMsg.style.display   = 'block';
+    errMsg.innerHTML       = msg;
+  }
+
+  /* ── Timer ── */
+  function startTimer() {
     clearInterval(timerHandle);
     let remaining = DURATION;
     elTimer.textContent = remaining;
+    arc.style.transition = 'none';
     arc.style.strokeDashoffset = 0;
+
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      arc.style.transition = `stroke-dashoffset ${DURATION}s linear`;
+      arc.style.strokeDashoffset = CIRCUMF;
+    }));
 
     timerHandle = setInterval(() => {
       remaining--;
       elTimer.textContent = Math.max(0, remaining);
-      // dashoffset goes from 0 → CIRCUMF (full circle consumed)
-      const offset = CIRCUMF * (1 - remaining / DURATION);
-      arc.style.strokeDashoffset = offset;
-      if (remaining <= 0) {
-        clearInterval(timerHandle);
-        onFinished();
-      }
+      if (remaining <= 0) { clearInterval(timerHandle); setFinished(); }
     }, 1000);
-  });
+  }
 
-  audio.addEventListener('ended', () => { clearInterval(timerHandle); onFinished(); });
+  /* ── Play ── */
+  function doPlay() {
+    setPlaying();
+    audio.play().then(() => {
+      startTimer();
+    }).catch(() => {
+      setNeedsTap();
+    });
+  }
 
-  function onFinished() {
-    audio.pause();
-    document.querySelectorAll('.ring').forEach(r => r.classList.remove('pulse'));
-    elTimer.textContent = '0';
-    arc.style.strokeDashoffset = CIRCUMF;
-    elStatus.textContent = 'Extrait terminé';
-    elCheck.style.display = 'block';
-    btnReplay.style.display = 'inline-block';
+  function manualPlay() {
+    btnTap.style.display = 'none';
+    audio.play().then(() => {
+      setPlaying();
+      startTimer();
+    });
   }
 
   function replay() {
-    if (!previewUrl) return;
-    elCheck.style.display  = 'none';
-    btnReplay.style.display= 'none';
-    elStatus.textContent   = '';
-    arc.style.strokeDashoffset = 0;
-    elTimer.textContent    = DURATION;
-    document.querySelectorAll('.ring').forEach(r => r.classList.add('pulse'));
+    btnReplay.style.display = 'none';
     audio.currentTime = 0;
-    audio.play();
+    doPlay();
   }
+
+  /* ── Audio events ── */
+  audio.addEventListener('ended', () => {
+    clearInterval(timerHandle);
+    setFinished();
+  });
 
   /* ── Boot ── */
   (async () => {
-    try {
-      const url = await fetchPreview();
-      if (!url) throw new Error('no preview');
-      startPlay(url);
-    } catch(e) {
-      document.body.classList.add('error');
-      document.body.classList.remove('loading');
-      elStatus.textContent = 'Aperçu non disponible 😕';
-      elProg.style.display = 'none';
+    setLoading();
+    const url = await fetchItunes();
+    if (!url) {
+      setError('Aperçu audio<br>non disponible 😕');
+      return;
     }
+    previewUrl      = url;
+    audio.src       = url;
+    audio.load();
+    doPlay();
   })();
 </script>
 
