@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debug iTunes</title>
+<style>
+  body { background:#111; color:#fff; font-family:monospace; padding:20px; font-size:13px; }
+  h2 { color:#FFD700; margin-bottom:16px; }
+  .test { margin:10px 0; padding:10px; background:#1a1a1a; border-radius:6px; border-left:3px solid #444; }
+  .ok  { border-left-color:#2ecc71; }
+  .err { border-left-color:#e74c3c; }
+  .pending { border-left-color:#FFD700; }
+  button { background:#FF1D58; color:#fff; border:none; padding:10px 20px; border-radius:6px; font-size:14px; cursor:pointer; margin-bottom:20px; }
+  audio { width:100%; margin-top:10px; }
+</style>
+</head>
+<body>
+<h2>🔍 Debug iTunes API</h2>
+<button onclick="runAll()">▶ Lancer les tests</button>
+<div id="results"></div>
+
+<script>
+const artist = "David Bowie";
+const title  = "Starman";
+const q      = encodeURIComponent(artist + " " + title);
+const ITUNES = `https://itunes.apple.com/search?term=${q}&media=music&limit=5&entity=song`;
+
+const ATTEMPTS = [
+  { label: "1. Direct iTunes (sans proxy)",          url: () => ITUNES },
+  { label: "2. corsproxy.io",                         url: () => `https://corsproxy.io/?${encodeURIComponent(ITUNES)}` },
+  { label: "3. allorigins.win",                       url: () => `https://api.allorigins.win/raw?url=${encodeURIComponent(ITUNES)}` },
+  { label: "4. thingproxy.freeboard.io",             url: () => `https://thingproxy.freeboard.io/fetch/${ITUNES}` },
+  { label: "5. jsonp.afeld.me (JSONP trick)",         url: () => null, jsonp: true },
+];
+
+const res = document.getElementById('results');
+
+function addTest(label) {
+  const div = document.createElement('div');
+  div.className = 'test pending';
+  div.id = 'test-' + label.replace(/\W/g,'');
+  div.innerHTML = `<b>${label}</b><br><span class="msg">En cours…</span>`;
+  res.appendChild(div);
+  return div;
+}
+
+function setOk(div, msg, previewUrl) {
+  div.className = 'test ok';
+  div.querySelector('.msg').innerHTML = '✅ ' + msg;
+  if (previewUrl) {
+    const a = document.createElement('audio');
+    a.controls = true;
+    a.src = previewUrl;
+    div.appendChild(a);
+  }
+}
+
+function setErr(div, msg) {
+  div.className = 'test err';
+  div.querySelector('.msg').textContent = '❌ ' + msg;
+}
+
+async function testUrl(attempt) {
+  const div = addTest(attempt.label);
+  try {
+    const url = attempt.url();
+    const resp = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    if (!resp.ok) { setErr(div, `HTTP ${resp.status}`); return; }
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { setErr(div, 'Réponse non-JSON : ' + text.slice(0,80)); return; }
+    const results = data.results || [];
+    const withPreview = results.filter(r => r.previewUrl);
+    if (withPreview.length === 0) { setErr(div, 'Aucun previewUrl dans les résultats'); return; }
+    setOk(div, `OK — ${withPreview.length} preview(s) trouvé(s)`, withPreview[0].previewUrl);
+  } catch(e) {
+    setErr(div, e.message || String(e));
+  }
+}
+
+/* JSONP test — bypasses CORS natively */
+function testJsonp() {
+  const div = addTest("5. iTunes JSONP natif");
+  const cb  = 'itunesCb_' + Date.now();
+  const script = document.createElement('script');
+  const q2 = encodeURIComponent(artist + ' ' + title);
+  script.src = `https://itunes.apple.com/search?term=${q2}&media=music&limit=5&entity=song&callback=${cb}`;
+  let done = false;
+  window[cb] = (data) => {
+    done = true;
+    const withPreview = (data.results||[]).filter(r=>r.previewUrl);
+    if (withPreview.length) setOk(div, `JSONP OK — ${withPreview.length} preview(s)`, withPreview[0].previewUrl);
+    else setErr(div, 'JSONP OK mais aucun previewUrl');
+    delete window[cb];
+  };
+  script.onerror = () => { if(!done) setErr(div, 'JSONP échoué'); };
+  setTimeout(() => { if(!done) setErr(div, 'Timeout JSONP'); }, 8000);
+  document.head.appendChild(script);
+}
+
+async function runAll() {
+  res.innerHTML = '';
+  for (const a of ATTEMPTS.filter(x => !x.jsonp)) await testUrl(a);
+  testJsonp();
+}
+</script>
+
+</body>
+</html>
